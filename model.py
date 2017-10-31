@@ -1,3 +1,8 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""model"""
+
 import tensorflow as tf
 from tensorflow.contrib import rnn
 from tensorflow.contrib import legacy_seq2seq
@@ -6,6 +11,8 @@ import numpy as np
 
 
 class Model():
+    """Model"""
+
     def __init__(self, args, training=True):
         self.args = args
         if not training:
@@ -34,10 +41,10 @@ class Model():
 
         self.cell = cell = rnn.MultiRNNCell(cells, state_is_tuple=True)
 
-        self.input_data = tf.placeholder(
-            tf.int32, [args.batch_size, args.seq_length])
-        self.targets = tf.placeholder(
-            tf.int32, [args.batch_size, args.seq_length])
+        self.input_data = tf.placeholder(tf.int32,
+                                         [args.batch_size, args.seq_length])
+        self.targets = tf.placeholder(tf.int32,
+                                      [args.batch_size, args.seq_length])
         self.initial_state = cell.zero_state(args.batch_size, tf.float32)
 
         with tf.variable_scope('rnnlm'):
@@ -60,23 +67,23 @@ class Model():
             prev_symbol = tf.stop_gradient(tf.argmax(prev, 1))
             return tf.nn.embedding_lookup(embedding, prev_symbol)
 
-        outputs, last_state = legacy_seq2seq.rnn_decoder(inputs, self.initial_state, cell, loop_function=loop if not training else None, scope='rnnlm')
+        outputs, last_state = legacy_seq2seq.rnn_decoder(
+            inputs, self.initial_state, cell, loop_function=loop if not training else None, scope='rnnlm')
         output = tf.reshape(tf.concat(outputs, 1), [-1, args.rnn_size])
-
 
         self.logits = tf.matmul(output, softmax_w) + softmax_b
         self.probs = tf.nn.softmax(self.logits)
         loss = legacy_seq2seq.sequence_loss_by_example(
-                [self.logits],
-                [tf.reshape(self.targets, [-1])],
-                [tf.ones([args.batch_size * args.seq_length])])
+            [self.logits],
+            [tf.reshape(self.targets, [-1])],
+            [tf.ones([args.batch_size * args.seq_length])])
         with tf.name_scope('cost'):
             self.cost = tf.reduce_sum(loss) / args.batch_size / args.seq_length
         self.final_state = last_state
         self.lr = tf.Variable(0.0, trainable=False)
         tvars = tf.trainable_variables()
         grads, _ = tf.clip_by_global_norm(tf.gradients(self.cost, tvars),
-                args.grad_clip)
+                                          args.grad_clip)
         with tf.name_scope('optimizer'):
             optimizer = tf.train.AdamOptimizer(self.lr)
         self.train_op = optimizer.apply_gradients(zip(grads, tvars))
@@ -97,7 +104,7 @@ class Model():
         def weighted_pick(weights):
             t = np.cumsum(weights)
             s = np.sum(weights)
-            return(int(np.searchsorted(t, np.random.rand(1)*s)))
+            return(int(np.searchsorted(t, np.random.rand(1) * s)))
 
         ret = prime
         char = prime[-1]

@@ -12,7 +12,7 @@ from model import Model
 
 def main():
     parser = argparse.ArgumentParser(
-                        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument('--data_dir', type=str, default='data/tinyshakespeare',
                         help='data directory containing input.txt')
     parser.add_argument('--save_dir', type=str, default='save',
@@ -62,9 +62,11 @@ def train(args):
     # check compatibility if training is continued from previously saved model
     if args.init_from is not None:
         # check if all necessary files exist
-        assert os.path.isdir(args.init_from)," %s must be a a path" % args.init_from
-        assert os.path.isfile(os.path.join(args.init_from,"config.pkl")),"config.pkl file does not exist in path %s"%args.init_from
-        assert os.path.isfile(os.path.join(args.init_from,"chars_vocab.pkl")),"chars_vocab.pkl.pkl file does not exist in path %s" % args.init_from
+        assert os.path.isdir(args.init_from), " %s must be a a path" % args.init_from
+        assert os.path.isfile(os.path.join(args.init_from, "config.pkl")
+                              ), "config.pkl file does not exist in path %s" % args.init_from
+        assert os.path.isfile(os.path.join(args.init_from, "chars_vocab.pkl")
+                              ), "chars_vocab.pkl.pkl file does not exist in path %s" % args.init_from
         ckpt = tf.train.get_checkpoint_state(args.init_from)
         assert ckpt, "No checkpoint found"
         assert ckpt.model_checkpoint_path, "No model path found in checkpoint"
@@ -74,20 +76,21 @@ def train(args):
             saved_model_args = cPickle.load(f)
         need_be_same = ["model", "rnn_size", "num_layers", "seq_length"]
         for checkme in need_be_same:
-            assert vars(saved_model_args)[checkme]==vars(args)[checkme],"Command line argument and saved model disagree on '%s' "%checkme
+            assert vars(saved_model_args)[checkme] == vars(args)[
+                checkme], "Command line argument and saved model disagree on '%s' " % checkme
 
         # open saved vocab/dict and check if vocabs/dicts are compatible
         with open(os.path.join(args.init_from, 'chars_vocab.pkl'), 'rb') as f:
             saved_chars, saved_vocab = cPickle.load(f)
-        assert saved_chars==data_loader.chars, "Data and loaded model disagree on character set!"
-        assert saved_vocab==data_loader.vocab, "Data and loaded model disagree on dictionary mappings!"
+        assert saved_chars == data_loader.chars, "Data and loaded model disagree on character set!"
+        assert saved_vocab == data_loader.vocab, "Data and loaded model disagree on dictionary mappings!"
 
     if not os.path.isdir(args.save_dir):
         os.makedirs(args.save_dir)
-    with open(os.path.join(args.save_dir, 'config.pkl'), 'wb') as f:
-        cPickle.dump(args, f)
-    with open(os.path.join(args.save_dir, 'chars_vocab.pkl'), 'wb') as f:
-        cPickle.dump((data_loader.chars, data_loader.vocab), f)
+    with open(os.path.join(args.save_dir, 'config.pkl'), 'wb') as fh_config:
+        cPickle.dump(args, fh_config)
+    with open(os.path.join(args.save_dir, 'chars_vocab.pkl'), 'wb') as fh_chars_vocab:
+        cPickle.dump((data_loader.chars, data_loader.vocab), fh_chars_vocab)
 
     model = Model(args)
 
@@ -95,7 +98,7 @@ def train(args):
         # instrument for tensorboard
         summaries = tf.summary.merge_all()
         writer = tf.summary.FileWriter(
-                os.path.join(args.log_dir, time.strftime("%Y-%m-%d-%H-%M-%S")))
+            os.path.join(args.log_dir, time.strftime("%Y-%m-%d-%H-%M-%S")))
         writer.add_graph(sess.graph)
 
         sess.run(tf.global_variables_initializer())
@@ -117,7 +120,11 @@ def train(args):
                     feed[h] = state[i].h
 
                 # instrument for tensorboard
-                summ, train_loss, state, _ = sess.run([summaries, model.cost, model.final_state, model.train_op], feed)
+                summ, train_loss, state, _ = sess.run([summaries,
+                                                       model.cost,
+                                                       model.final_state,
+                                                       model.train_op],
+                                                      feed)
                 writer.add_summary(summ, e * data_loader.num_batches + b)
 
                 end = time.time()
@@ -126,8 +133,8 @@ def train(args):
                               args.num_epochs * data_loader.num_batches,
                               e, train_loss, end - start))
                 if (e * data_loader.num_batches + b) % args.save_every == 0\
-                        or (e == args.num_epochs-1 and
-                            b == data_loader.num_batches-1):
+                        or (e == args.num_epochs - 1 and
+                            b == data_loader.num_batches - 1):
                     # save for the last result
                     checkpoint_path = os.path.join(args.save_dir, 'model.ckpt')
                     saver.save(sess, checkpoint_path,
